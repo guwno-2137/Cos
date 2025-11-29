@@ -1,46 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Hologram JS</title>
+<title>Hologram Polska</title>
 <style>
-  body {
-    font-family: sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background: #f2f2f2;
-  }
-  #hologram-container {
-    display: flex;
-    align-items: center;
-  }
-  #flag {
-    position: relative;
-    width: 30px;
-    height: 35px;
-  }
-  #triangle {
-    position: absolute;
-    width: 8px;
-    height: 4px;
-    bottom: -4px;
-    left: 11px; /* wycentrowany */
-  }
-  #text {
-    margin-left: 5px;
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.3;
-  }
+body {
+  font-family: sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f2f2f2;
+}
+#hologram-container {
+  display: flex;
+  align-items: center;
+}
+#flag {
+  position: relative;
+  width: 30px;
+  height: 35px;
+}
+#triangle {
+  position: absolute;
+  width: 8px;
+  height: 4px;
+  bottom: -4px;
+  left: 11px;
+}
+#text {
+  margin-left: 5px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+#eagle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 33.5px;
+  pointer-events: none;
+}
 </style>
 </head>
 <body>
 <div id="hologram-container">
   <canvas id="flag"></canvas>
   <canvas id="triangle"></canvas>
+  <img id="eagle" src="https://upload.wikimedia.org/wikipedia/commons/1/12/Polish_coat_of_arms.svg" alt="Orzeł">
   <div id="text">Rzeczpospolita<br>Polska</div>
 </div>
 
@@ -54,10 +62,8 @@ const colorSequence = [
   '#796F6F'
 ];
 
-// Smoothstep
 function smoothStep(t) { return t*t*(3-2*t); }
 
-// Interpolacja kolorów
 function lerpColor(c1, c2, t) {
   const f = parseInt;
   const r = Math.round(f(c1.substr(1,2),16)*(1-t) + f(c2.substr(1,2),16)*t);
@@ -66,12 +72,11 @@ function lerpColor(c1, c2, t) {
   return `rgb(${r},${g},${b})`;
 }
 
-// Get color for angle
 function getColorForAngle(angle) {
-  let position = (angle / 360) * colorSequence.length;
-  let i1 = Math.floor(position) % colorSequence.length;
+  let pos = (angle / 360) * colorSequence.length;
+  let i1 = Math.floor(pos) % colorSequence.length;
   let i2 = (i1 + 1) % colorSequence.length;
-  let t = smoothStep(position - Math.floor(position));
+  let t = smoothStep(pos - Math.floor(pos));
   return lerpColor(colorSequence[i1], colorSequence[i2], t);
 }
 
@@ -84,7 +89,6 @@ const triCtx = triCanvas.getContext('2d');
 
 let pitchAngle = 0;
 
-// Gradient flagi
 function drawFlag() {
   const grad = flagCtx.createLinearGradient(0,0,0,flagCanvas.height);
   for(let i=0;i<=8;i++){
@@ -93,7 +97,6 @@ function drawFlag() {
   }
   flagCtx.fillStyle = grad;
   flagCtx.clearRect(0,0,flagCanvas.width,flagCanvas.height);
-  // zaokrąglone dolne rogi
   const w = flagCanvas.width;
   const h = flagCanvas.height;
   const r = w*0.125;
@@ -108,7 +111,6 @@ function drawFlag() {
   flagCtx.fill();
 }
 
-// Trójkącik
 function drawTriangle() {
   triCtx.clearRect(0,0,triCanvas.width,triCanvas.height);
   const w = triCanvas.width;
@@ -141,14 +143,11 @@ if(window.DeviceMotionEvent){
     drawTriangle();
   });
 }else{
-  // fallback: obracamy co 50ms dla desktop
   setInterval(()=>{pitchAngle=(pitchAngle+2)%360; drawFlag(); drawTriangle();},50);
 }
 
-// początkowe rysowanie
 drawFlag();
 drawTriangle();
-
 </script>
 </body>
 </html>
