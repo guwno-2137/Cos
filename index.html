@@ -1,90 +1,104 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>Hologram Polska</title>
 <style>
   body {
-    background: #111;
-    margin: 0;
-    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100vh;
+    background: #eee;
+    font-family: sans-serif;
   }
-
-  #wrapper {
+  .hologram {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .shield {
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: 60px;
+    height: 70px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background: linear-gradient(to bottom, #796F6F, #217A9C, #29E11D, #C2C974, #8B0000);
+    transition: background 0.2s;
   }
-
-  /* kolorowa poświata HOLOGRAMU */
-  #glow {
+  .triangle {
     position: absolute;
-    width: 230px;
-    height: 230px;
-    top: -15px;
-    left: -15px;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      rgba(255,255,0,0.45),
-      rgba(160,0,255,0.4)
-    );
-    filter: blur(30px);
-    z-index: 0;
-    transition: transform 0.1s linear;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 8px;
+    background: linear-gradient(to bottom, #796F6F, #29E11D);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
   }
-
-  /* samo godło - NIC NIE ZMIENIAMY W KOLORACH */
-  #godlo {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    z-index: 2;
-    transition: transform 0.1s linear;
+  .shield svg {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 50px;
+    height: 50px;
+  }
+  .text {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.3;
   }
 </style>
-
 </head>
 <body>
-
-<div id="wrapper">
-  <div id="glow"></div>
-  <img src="godlo.png" id="godlo">
-</div>
+  <div class="hologram" id="hologram">
+    <div class="shield">
+      <div class="triangle"></div>
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="white"/>
+      </svg>
+    </div>
+    <div class="text">Rzeczpospolita<br>Polska</div>
+  </div>
 
 <script>
-  // iPhone – permission
-  if (typeof DeviceOrientationEvent.requestPermission === "function") {
-    document.body.addEventListener("click", () => {
-      DeviceOrientationEvent.requestPermission();
-    });
-  }
+  const shield = document.querySelector('.shield');
+  const colorSequence = [
+    '#796F6F', '#217A9C', '#796F6F', '#C2C974', '#796F6F',
+    '#8B0000', '#796F6F', '#29E11D', '#796F6F', '#29E11D',
+    '#796F6F', '#217A9C', '#796F6F', '#C2C974', '#796F6F',
+    '#8B0000', '#796F6F', '#8B0000', '#796F6F', '#C2C974', '#796F6F'
+  ];
 
-  const img = document.getElementById("godlo");
-  const glow = document.getElementById("glow");
+  document.getElementById('hologram').addEventListener('mousemove', e => {
+    // Oblicz pozycję myszki nad elementem
+    const rect = shield.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percent = x / rect.width; // 0-1
+    const index = Math.floor(percent * colorSequence.length) % colorSequence.length;
+    const nextIndex = (index + 1) % colorSequence.length;
 
-  window.addEventListener("deviceorientation", (e) => {
-    if (!e.beta && !e.gamma) return;
+    // Interpolacja kolorów
+    const t = (percent * colorSequence.length) - index;
+    const col1 = hexToRgb(colorSequence[index]);
+    const col2 = hexToRgb(colorSequence[nextIndex]);
+    const r = Math.round(col1.r + (col2.r - col1.r) * t);
+    const g = Math.round(col1.g + (col2.g - col1.g) * t);
+    const b = Math.round(col1.b + (col2.b - col1.b) * t);
 
-    const x = e.beta;  // góra-dół
-    const y = e.gamma; // lewo-prawo
-
-    // lekka rotacja godła
-    img.style.transform = `
-      rotateX(${x/5}deg)
-      rotateY(${y/5}deg)
-    `;
-
-    // poświata hologramu porusza się za ruchem
-    glow.style.transform = `
-      translate(${y * 0.8}px, ${x * 0.8}px)
-    `;
+    shield.style.background = `linear-gradient(to bottom, rgb(${r},${g},${b}), #796F6F)`;
   });
-</script>
 
+  function hexToRgb(hex) {
+    const bigint = parseInt(hex.replace('#',''), 16);
+    return {
+      r: (bigint >> 16) & 255,
+      g: (bigint >> 8) & 255,
+      b: bigint & 255
+    };
+  }
+</script>
 </body>
 </html>
