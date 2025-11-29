@@ -2,56 +2,62 @@
 <html lang="pl">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
   body {
     background: #111;
+    margin: 0;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
   }
 
-  .holo {
+  #wrapper {
+    position: relative;
     width: 200px;
     height: 200px;
-    perspective: 800px;
   }
 
+  /* kolorowa poświata HOLOGRAMU */
+  #glow {
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    top: -15px;
+    left: -15px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      rgba(255,255,0,0.45),
+      rgba(160,0,255,0.4)
+    );
+    filter: blur(30px);
+    z-index: 0;
+    transition: transform 0.1s linear;
+  }
+
+  /* samo godło - NIC NIE ZMIENIAMY W KOLORACH */
   #godlo {
+    position: relative;
     width: 100%;
     height: 100%;
     object-fit: contain;
-
-    /* szare, bazowe godło */
-    filter: grayscale(100%) brightness(1.2);
-
-    /* efekt świecącego hologramu */
-    mix-blend-mode: screen;
-    transition: transform 0.1s linear, filter 0.1s linear;
-  }
-
-  /* dodatkowy kolorowy blask */
-  .glow {
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(255,255,0,0.4), rgba(140,0,255,0.35));
-    filter: blur(25px);
-    z-index: -1;
+    z-index: 2;
     transition: transform 0.1s linear;
   }
 </style>
+
 </head>
 <body>
 
-<div class="holo">
-  <div class="glow" id="glow"></div>
+<div id="wrapper">
+  <div id="glow"></div>
   <img src="godlo.png" id="godlo">
 </div>
 
 <script>
-  // iOS permission
+  // iPhone – permission
   if (typeof DeviceOrientationEvent.requestPermission === "function") {
     document.body.addEventListener("click", () => {
       DeviceOrientationEvent.requestPermission();
@@ -62,29 +68,20 @@
   const glow = document.getElementById("glow");
 
   window.addEventListener("deviceorientation", (e) => {
-    const beta = e.beta;   // góra–dół
-    const gamma = e.gamma; // lewo–prawo
+    if (!e.beta && !e.gamma) return;
 
-    // ruch hologramu
+    const x = e.beta;  // góra-dół
+    const y = e.gamma; // lewo-prawo
+
+    // lekka rotacja godła
     img.style.transform = `
-      rotateX(${beta / 5}deg)
-      rotateY(${gamma / 5}deg)
+      rotateX(${x/5}deg)
+      rotateY(${y/5}deg)
     `;
 
-    // poświata przesuwa się za ruchem
+    // poświata hologramu porusza się za ruchem
     glow.style.transform = `
-      translateX(${gamma * 0.8}px)
-      translateY(${beta * 0.8}px)
-    `;
-
-    // dynamiczne świecenie żółto-fioletowe
-    const glowPower = Math.abs(beta) + Math.abs(gamma);
-
-    img.style.filter = `
-      grayscale(100%)
-      brightness(1.2)
-      drop-shadow(0 0 ${10 + glowPower / 3}px rgba(255,255,0,0.6))
-      drop-shadow(0 0 ${15 + glowPower / 4}px rgba(150,0,255,0.5))
+      translate(${y * 0.8}px, ${x * 0.8}px)
     `;
   });
 </script>
