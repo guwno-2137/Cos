@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -16,7 +15,7 @@
     box-shadow: 0 0 20px rgba(0,0,0,0.2);
     background: #fff;
   }
-  canvas { width:100%; height:100%; display:block; }
+  canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
   #godlo {
     position:absolute;
     top:50%;
@@ -24,7 +23,6 @@
     width:80px;
     height:80px;
     transform: translate(-50%,-50%);
-    opacity:0.6;
     pointer-events:none;
   }
 </style>
@@ -47,46 +45,63 @@ function resize(){
 resize();
 window.addEventListener("resize", resize);
 
-let ang = 0;
+let angle = 0;
 
-function draw(angle){
-  const t = ((angle % 360) + 360) % 360 / 360;
+// funkcja rysująca hologram na koronie i okręgu
+function drawHolo(t){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // płynny gradient kolorów hologramu
-  const grd = ctx.createLinearGradient(0, 0, canvas.clientWidth, canvas.clientHeight);
-  grd.addColorStop(0, `hsl(${t*360}, 70%, 80%)`);
-  grd.addColorStop(0.5, `hsl(${(t*360+60)%360}, 70%, 80%)`);
-  grd.addColorStop(1, `hsl(${(t*360+120)%360}, 70%, 80%)`);
+  if(t === 0) return; // jeśli telefon statyczny, brak kolorów
 
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+  const grd = ctx.createLinearGradient(0,0,canvas.clientWidth,canvas.clientHeight);
+  grd.addColorStop(0, `hsl(${t*360}, 80%, 70%)`);
+  grd.addColorStop(0.5, `hsl(${(t*360+60)%360}, 80%, 70%)`);
+  grd.addColorStop(1, `hsl(${(t*360+120)%360}, 80%, 70%)`);
 
-  // shimmer
-  const shimmer = ctx.createLinearGradient(0,0,canvas.clientWidth,canvas.clientHeight);
-  shimmer.addColorStop(0,"rgba(255,255,255,0.2)");
-  shimmer.addColorStop(0.5,"rgba(255,255,255,0)");
-  shimmer.addColorStop(1,"rgba(255,255,255,0.2)");
-  ctx.fillStyle = shimmer;
-  ctx.fillRect(0,0,canvas.clientWidth,canvas.clientHeight);
+  ctx.strokeStyle = grd;
+  ctx.lineWidth = 5;
+
+  // okrąg wokół godła
+  ctx.beginPath();
+  ctx.arc(canvas.clientWidth/2, canvas.clientHeight/2, 40, 0, Math.PI*2);
+  ctx.stroke();
+
+  // korona (prostokątny prosty symbol korony na szczycie okręgu)
+  ctx.beginPath();
+  ctx.moveTo(canvas.clientWidth/2-15, canvas.clientHeight/2-40);
+  ctx.lineTo(canvas.clientWidth/2, canvas.clientHeight/2-55);
+  ctx.lineTo(canvas.clientWidth/2+15, canvas.clientHeight/2-40);
+  ctx.stroke();
 }
 
-// obsługa nachylenia telefonu
+// nasłuch nachylenia telefonu
 function handler(e){
   const y = e.accelerationIncludingGravity?.y;
   const z = e.accelerationIncludingGravity?.z;
   if(typeof y==="number" && typeof z==="number"){
-    ang = (Math.atan2(y,z)*180/Math.PI + 180) % 360;
-    draw(ang);
+    angle = (Math.atan2(y,z) * 180 / Math.PI + 180) % 360;
+    const t = Math.min(Math.abs(angle-180)/180,1); // im bardziej przechylony, tym intensywniejszy kolor
+    drawHolo(t);
   }
+}
+
+// fallback dla komputera – delikatna animacja
+function fallbackAnim(){
+  let t = 0;
+  setInterval(()=>{
+    t += 0.01;
+    if(t>1) t=0;
+    drawHolo(t);
+  }, 40);
 }
 
 if(window.DeviceMotionEvent){
   window.addEventListener("devicemotion", handler);
 }else{
-  setInterval(()=>{ ang=(ang+1)%360; draw(ang); }, 40);
+  fallbackAnim();
 }
 
-draw(0);
+drawHolo(0); // start – brak koloru
 </script>
 </body>
 </html>
