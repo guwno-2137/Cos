@@ -20,8 +20,8 @@
     position:absolute;
     top:50%;
     left:50%;
-    width:80px;
-    height:80px;
+    width:100px;
+    height:100px;
     transform: translate(-50%,-50%);
     pointer-events:none;
   }
@@ -45,47 +45,45 @@ function resize(){
 resize();
 window.addEventListener("resize", resize);
 
-let angle = 0;
-
-// funkcja rysująca hologram na koronie i okręgu
-function drawHolo(t){
+function drawHolo(intensity){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(intensity <= 0) return; // brak koloru przy statycznym telefonie
 
-  if(t === 0) return; // jeśli telefon statyczny, brak kolorów
-
+  // dynamiczny gradient hologramu
   const grd = ctx.createLinearGradient(0,0,canvas.clientWidth,canvas.clientHeight);
-  grd.addColorStop(0, `hsl(${t*360}, 80%, 70%)`);
-  grd.addColorStop(0.5, `hsl(${(t*360+60)%360}, 80%, 70%)`);
-  grd.addColorStop(1, `hsl(${(t*360+120)%360}, 80%, 70%)`);
+  grd.addColorStop(0, `hsl(${intensity*360}, 80%, 70%)`);
+  grd.addColorStop(0.5, `hsl(${(intensity*360+60)%360}, 80%, 70%)`);
+  grd.addColorStop(1, `hsl(${(intensity*360+120)%360}, 80%, 70%)`);
 
   ctx.strokeStyle = grd;
   ctx.lineWidth = 5;
 
   // okrąg wokół godła
   ctx.beginPath();
-  ctx.arc(canvas.clientWidth/2, canvas.clientHeight/2, 40, 0, Math.PI*2);
+  ctx.arc(canvas.clientWidth/2, canvas.clientHeight/2, 45, 0, Math.PI*2);
   ctx.stroke();
 
-  // korona (prostokątny prosty symbol korony na szczycie okręgu)
+  // korona nad głową orła
   ctx.beginPath();
-  ctx.moveTo(canvas.clientWidth/2-15, canvas.clientHeight/2-40);
+  ctx.moveTo(canvas.clientWidth/2-20, canvas.clientHeight/2-35);
   ctx.lineTo(canvas.clientWidth/2, canvas.clientHeight/2-55);
-  ctx.lineTo(canvas.clientWidth/2+15, canvas.clientHeight/2-40);
+  ctx.lineTo(canvas.clientWidth/2+20, canvas.clientHeight/2-35);
   ctx.stroke();
 }
 
-// nasłuch nachylenia telefonu
+// obsługa nachylenia telefonu
 function handler(e){
   const y = e.accelerationIncludingGravity?.y;
   const z = e.accelerationIncludingGravity?.z;
-  if(typeof y==="number" && typeof z==="number"){
-    angle = (Math.atan2(y,z) * 180 / Math.PI + 180) % 360;
-    const t = Math.min(Math.abs(angle-180)/180,1); // im bardziej przechylony, tym intensywniejszy kolor
-    drawHolo(t);
+  if(typeof y === "number" && typeof z === "number"){
+    const angle = Math.atan2(y,z) * 180 / Math.PI;
+    // intensywność koloru od 0 (telefon pionowo) do 1 (maksymalny kąt)
+    const intensity = Math.min(Math.abs(angle)/45, 1);
+    drawHolo(intensity);
   }
 }
 
-// fallback dla komputera – delikatna animacja
+// fallback dla komputera – lekka animacja
 function fallbackAnim(){
   let t = 0;
   setInterval(()=>{
