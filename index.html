@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -31,15 +32,10 @@
 <body>
   <div id="doc">
     <canvas id="c"></canvas>
-    <img id="godlo" src="data:image/svg+xml;utf8,
-      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
-        <circle cx='50' cy='50' r='45' fill='none' stroke='gold' stroke-width='5'/>
-        <text x='50' y='60' font-size='50' text-anchor='middle' fill='gold'>🦅</text>
-      </svg>" alt="godło"/>
+    <img id="godlo" src="godlo.svg" alt="godło"/>
   </div>
 
 <script>
-const colors = ["#ff9999","#ffff99","#ccffcc","#ccccff"];
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
@@ -51,38 +47,27 @@ function resize(){
 resize();
 window.addEventListener("resize", resize);
 
-function lerp(a,b,t){
-  const ar = parseInt(a.substr(1,2),16);
-  const ag = parseInt(a.substr(3,2),16);
-  const ab = parseInt(a.substr(5,2),16);
-  const br = parseInt(b.substr(1,2),16);
-  const bg = parseInt(b.substr(3,2),16);
-  const bb = parseInt(b.substr(5,2),16);
-  return `rgb(${Math.round(ar + (br-ar)*t)},${Math.round(ag + (bg-ag)*t)},${Math.round(ab + (bb-ab)*t)})`;
-}
-
 let ang = 0;
 
 function draw(angle){
   const t = ((angle % 360) + 360) % 360 / 360;
-  const idx = Math.floor(t * colors.length);
-  const nxt = (idx + 1) % colors.length;
-  const frac = (t * colors.length) - idx;
-  const col = lerp(colors[idx], colors[nxt], frac);
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // płynny gradient kolorów hologramu
+  const grd = ctx.createLinearGradient(0, 0, canvas.clientWidth, canvas.clientHeight);
+  grd.addColorStop(0, `hsl(${t*360}, 70%, 80%)`);
+  grd.addColorStop(0.5, `hsl(${(t*360+60)%360}, 70%, 80%)`);
+  grd.addColorStop(1, `hsl(${(t*360+120)%360}, 70%, 80%)`);
 
-  // tło hologramu
-  ctx.fillStyle = col;
-  ctx.fillRect(0,0, canvas.clientWidth, canvas.clientHeight);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
 
   // shimmer
-  const grd = ctx.createLinearGradient(0,0,canvas.clientWidth,canvas.clientHeight);
-  grd.addColorStop(0,"rgba(255,255,255,0.2)");
-  grd.addColorStop(0.5,"rgba(255,255,255,0)");
-  grd.addColorStop(1,"rgba(255,255,255,0.2)");
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0, canvas.clientWidth, canvas.clientHeight);
+  const shimmer = ctx.createLinearGradient(0,0,canvas.clientWidth,canvas.clientHeight);
+  shimmer.addColorStop(0,"rgba(255,255,255,0.2)");
+  shimmer.addColorStop(0.5,"rgba(255,255,255,0)");
+  shimmer.addColorStop(1,"rgba(255,255,255,0.2)");
+  ctx.fillStyle = shimmer;
+  ctx.fillRect(0,0,canvas.clientWidth,canvas.clientHeight);
 }
 
 // obsługa nachylenia telefonu
