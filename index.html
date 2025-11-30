@@ -1,254 +1,96 @@
 <!doctype html>
 <html lang="pl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Hologram — pixel-close</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Hologram mObywatel-style</title>
 <style>
-  :root{ --box-w:30px; --box-h:35px; --canvas-w:30; --canvas-h:35; }
-  html,body{ height:100%; margin:0; font-family:Inter, system-ui, -apple-system, sans-serif; background:#fff; color:#111; display:flex; align-items:flex-start; padding:18px; }
-  #wrap{ display:flex; gap:10px; align-items:center; }
-  #holo-box{ width:var(--box-w); height:var(--box-h); position:relative; }
-  canvas{ display:block; width:var(--box-w); height:var(--box-h); }
-  #godlo{ position:absolute; left:0; top:0.75px; width:30px; height:33.5px; pointer-events:none; image-rendering:optimizeQuality; }
-  .label{ font-size:16px; font-weight:500; line-height:1.3; display:block; width:120px; word-break:break-word; }
-  #controls{ margin-top:12px; }
-  button{ padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#f7f7f7; cursor:pointer; }
-  small{ display:block; margin-top:8px; color:#666; }
+  body { background: #fff; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
+  #box { position: relative; width: 120px; height: 140px; } /* większy rozmiar do testów */
+  canvas { width:100%; height:100%; display:block; }
+  #godlo { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; image-rendering:optimizeQuality; }
 </style>
 </head>
 <body>
-
-<div id="wrap">
-  <div id="holo-box">
-    <canvas id="holo" width="30" height="35"></canvas>
-    <!-- Podmień na swój plik godlo.svg w tym samym katalogu -->
+  <div id="box">
+    <canvas id="c"></canvas>
     <img id="godlo" src="godlo.svg" alt="godło"/>
   </div>
-
-  <div>
-    <div class="label">Rzeczpospolita<br>Polska</div>
-
-    <div id="controls">
-      <button id="enableMotion">Allow motion (jeśli potrzebne)</button>
-      <small>Obróć telefon — gradient reaguje na przechylenie.</small>
-    </div>
-  </div>
-</div>
-
 <script>
-// ----- KONFIG -----
-const colorSequence = [
-  "#796F6F","#217A9C","#796F6F","#C2C974",
-  "#796F6F","#8B0000","#796F6F","#29E11D",
-  "#796F6F","#29E11D","#796F6F","#217A9C",
-  "#796F6F","#C2C974","#796F6F","#8B0000",
-  "#796F6F","#8B0000","#796F6F","#C2C974"
-]; // 20 elementów
+const colors = [
+  "#ff9999", // blady czerwony
+  "#ffff99", // blady żółty
+  "#ccffcc", // blady jasno-zielony
+  "#ccccff"  // blady fiolet
+];
 
-// ----- UTILS: sRGB <-> linear -----
-function srgbToLinearChannel(c){ c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
-function linearToSrgbChannel(c){ return c <= 0.0031308 ? 12.92*c : 1.055*Math.pow(c, 1/2.4)-0.055; }
-
-function hexToRgb(hex){
-  const n = parseInt(hex.replace('#',''),16);
-  return [(n>>16)&255, (n>>8)&255, n&255];
-}
-function rgbToHex(r,g,b){
-  const hh = (v)=>("0"+v.toString(16)).slice(-2);
-  return "#"+hh(r)+hh(g)+hh(b);
+function lerp(a, b, t){
+  const ar = parseInt(a.substr(1,2),16);
+  const ag = parseInt(a.substr(3,2),16);
+  const ab = parseInt(a.substr(5,2),16);
+  const br = parseInt(b.substr(1,2),16);
+  const bg = parseInt(b.substr(3,2),16);
+  const bb = parseInt(b.substr(5,2),16);
+  const rr = Math.round(ar + (br-ar)*t);
+  const gg = Math.round(ag + (bg-ag)*t);
+  const bb2 = Math.round(ab + (bb-ab)*t);
+  return `rgb(${rr},${gg},${bb2})`;
 }
 
-// interpolate in linear space (looks more like Flutter)
-function lerpColorLinear(aHex, bHex, t){
-  const [ar,ag,ab] = hexToRgb(aHex);
-  const [br,bg,bb] = hexToRgb(bHex);
-  const al = [srgbToLinearChannel(ar), srgbToLinearChannel(ag), srgbToLinearChannel(ab)];
-  const bl = [srgbToLinearChannel(br), srgbToLinearChannel(bg), srgbToLinearChannel(bb)];
-  const rl = al.map((v,i)=> v + (bl[i]-v) * t );
-  const rs = rl.map(linearToSrgbChannel).map(v => Math.round(Math.max(0,Math.min(1,v))*255));
-  return `rgb(${rs[0]},${rs[1]},${rs[2]})`;
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+function resize(){
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+resize();
+window.addEventListener("resize", resize);
+
+function draw(angle){
+  // map angle to 0..1
+  const t = ((angle % 360) + 360) % 360 / 360;
+  // cycle through 4 colors
+  const idx = Math.floor(t * (colors.length));
+  const nxt = (idx + 1) % colors.length;
+  const frac = (t * colors.length) - idx;
+  const col = lerp(colors[idx], colors[nxt], frac);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // tło
+  ctx.fillStyle = col;
+  ctx.fillRect(0,0, canvas.clientWidth, canvas.clientHeight);
+
+  // shimmer — prosty ślad światła
+  const grd = ctx.createLinearGradient(0,0, canvas.clientWidth, canvas.clientHeight);
+  grd.addColorStop(0, "rgba(255,255,255,0.2)");
+  grd.addColorStop(0.5, "rgba(255,255,255,0)");
+  grd.addColorStop(1, "rgba(255,255,255,0.2)");
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0, canvas.clientWidth, canvas.clientHeight);
 }
 
-// smoothstep cubic
-function smoothStep(t){ return t<=0?0: t>=1?1: t*t*(3-2*t); }
-
-// map angle [0,360) to colorSequence smoothly
-function colorForAngle(angle){
-  const len = colorSequence.length;
-  const pos = ( (angle%360 + 360) % 360 ) / 360 * len;
-  const i1 = Math.floor(pos) % len;
-  const i2 = (i1+1)%len;
-  const frac = smoothStep(pos - Math.floor(pos));
-  return lerpColorLinear(colorSequence[i1], colorSequence[i2], frac);
-}
-
-// ----- CANVAS SETUP (HDPI scaling) -----
-const canvas = document.getElementById('holo');
-const ctx = canvas.getContext('2d');
-
-function resizeForDPR(){
-  const DPR = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth;
-  const cssH = canvas.clientHeight;
-  canvas.width = Math.round(cssW * DPR);
-  canvas.height = Math.round(cssH * DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0); // scale drawing operations to CSS px
-}
-resizeForDPR();
-window.addEventListener('resize', resizeForDPR);
-
-// ----- DRAWING: try to mimic Flutter shapes precisely -----
-function drawRoundedBottomRect(x,y,w,h, radiusBottom){
-  // top-left (x,y), width w, height h
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + w, y);
-  ctx.lineTo(x + w, y + h - radiusBottom);
-  // bottom-right rounded inward like Flutter's RRect bottom corners (convex)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - radiusBottom, y + h);
-  ctx.lineTo(x + radiusBottom, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - radiusBottom);
-  ctx.closePath();
-}
-
-// trójkącik z wewnętrznymi zaokrągleniami (quadratic bezier)
-function drawBottomTriangle(cx, topY, baseW, height){
-  // cx = center x of triangle
-  const leftX = cx - baseW/2;
-  const rightX = cx + baseW/2;
-  const bottomY = topY + height;
-  ctx.beginPath();
-  ctx.moveTo(leftX, topY);
-  ctx.lineTo(rightX, topY);
-  // right inward curve to bottom tip
-  ctx.quadraticCurveTo(rightX - baseW*0.4, topY + height*0.3, cx, bottomY);
-  // left inward curve back
-  ctx.quadraticCurveTo(leftX + baseW*0.4, topY + height*0.3, leftX, topY);
-  ctx.closePath();
-}
-
-// main render
-function render(angle){
-  // clear (use CSS px coordinates)
-  ctx.clearRect(0,0, canvas.clientWidth, canvas.clientHeight);
-
-  // sizes exactly like Twoje: main "tło" 30x34.3 we have canvas height 35 => reserve little for tri
-  const w = 30, h = 34.3;
-  const cornerRadius = w * 0.125; // 12.5%
-  const x = 0, y = 0;
-
-  // compute gradient stops: prev -> current -> next with alpha-like emphasis
-  const prevColor = colorForAngle(angle - 30);
-  const currColor = colorForAngle(angle);
-  const nextColor = colorForAngle(angle + 30);
-
-  // create linear gradient top->bottom (mimic Flutter)
-  const grad = ctx.createLinearGradient(x, y, x, y + h);
-  grad.addColorStop(0.0, prevColor);
-  grad.addColorStop(0.35, lerpColorLinear(prevColor, currColor, 0.3));
-  grad.addColorStop(0.6, currColor);
-  grad.addColorStop(0.85, lerpColorLinear(currColor, nextColor, 0.5));
-  grad.addColorStop(1.0, nextColor);
-
-  // draw main rounded-bottom rect
-  ctx.fillStyle = grad;
-  drawRoundedBottomRect(x,y,w,h, cornerRadius);
-  ctx.fill();
-
-  // draw triangle continuation (positioned starting at ~34.5)
-  const triTop = h; // about 34.3
-  const triBaseW = 8; // jak w Twoim Flutterze proporcja ~8
-  const triHeight = 4; // proporcja 4
-  const triGrad = ctx.createLinearGradient(0, triTop, 0, triTop + triHeight);
-  triGrad.addColorStop(0, currColor);
-  triGrad.addColorStop(1, nextColor);
-  ctx.fillStyle = triGrad;
-  drawBottomTriangle(x + w/2, triTop, triBaseW, triHeight);
-  ctx.fill();
-
-  // optional subtle inner highlight to mimic Flutter anti-aliasing
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = '#ffffff';
-  // highlight strip near top
-  ctx.fillRect(x + 2, y + 2, w - 4, 4);
-  ctx.restore();
-}
-
-// ----- SENSOR HANDLING -----
-// we prefer DeviceMotionEvent accelerationIncludingGravity for angle similar to your Dart version using event.y,event.z
-let lastAngle = 0;
-function handleMotion(e){
-  let ay = e.accelerationIncludingGravity && e.accelerationIncludingGravity.y;
-  let az = e.accelerationIncludingGravity && e.accelerationIncludingGravity.z;
-  if (typeof ay === 'number' && typeof az === 'number'){
-    let pitch = Math.atan2(ay, az) * 180 / Math.PI;
-    lastAngle = (pitch + 180) % 360;
-    render(lastAngle);
+let ang = 0;
+function handler(e){
+  const y = e.accelerationIncludingGravity?.y;
+  const z = e.accelerationIncludingGravity?.z;
+  if (typeof y === 'number' && typeof z === 'number'){
+    ang = (Math.atan2(y,z) * 180 / Math.PI + 180) % 360;
+    draw(ang);
   }
 }
 
-// If DeviceMotionEvent not available, use DeviceOrientationEvent as fallback
-function handleOrientation(e){
-  // alpha,beta,gamma in degrees. We'll map beta (front-back tilt) roughly to angle.
-  let beta = e.beta || 0; // -180..180
-  // convert to 0..360 similar mapping: we'll map beta from -180..180 -> 0..360
-  lastAngle = (beta + 180) % 360;
-  render(lastAngle);
-}
-
-// permission button for iOS Safari (DeviceMotionEvent.requestPermission)
-const enableBtn = document.getElementById('enableMotion');
-enableBtn.addEventListener('click', async () => {
-  // try DeviceMotionEvent.requestPermission (iOS 13+)
-  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const perm = await DeviceMotionEvent.requestPermission();
-      if (perm === 'granted') {
-        window.addEventListener('devicemotion', handleMotion);
-        window.addEventListener('deviceorientation', handleOrientation);
-        enableBtn.textContent = 'Sensors enabled';
-        enableBtn.disabled = true;
-      } else {
-        enableBtn.textContent = 'Permission denied';
-      }
-    } catch(err){
-      enableBtn.textContent = 'Brak uprawnień';
-    }
-    return;
-  }
-
-  // Generic: if browser blocks, attach listeners directly (Android Chrome)
-  if ('ondevicemotion' in window) {
-    window.addEventListener('devicemotion', handleMotion);
-    enableBtn.textContent = 'Sensors listening';
-    enableBtn.disabled = true;
-    return;
-  }
-  if ('ondeviceorientation' in window) {
-    window.addEventListener('deviceorientation', handleOrientation);
-    enableBtn.textContent = 'Orientation listening';
-    enableBtn.disabled = true;
-    return;
-  }
-  enableBtn.textContent = 'Sensors not supported';
-});
-
-// Autostart listeners for browsers that allow without gesture
-if ('ondevicemotion' in window) {
-  window.addEventListener('devicemotion', handleMotion);
-} else if ('ondeviceorientation' in window) {
-  window.addEventListener('deviceorientation', handleOrientation);
+if (window.DeviceMotionEvent){
+  window.addEventListener("devicemotion", handler);
 } else {
-  // fallback animation (demo) - rotate slowly so you can check visuals on desktop
-  let animA = 0;
-  setInterval(()=>{ animA = (animA + 1) % 360; render(animA); }, 28);
+  setInterval(()=>{
+    ang = (ang + 1) % 360;
+    draw(ang);
+  }, 40);
 }
 
-// initial draw
-render(0);
+draw(0);
 </script>
-
 </body>
 </html>
